@@ -58,7 +58,6 @@ public class ActivityTrackerService extends Service implements Observer {
 	private Vector<JSONObject> fixVector;
 	private JSONObject fix;
 	private WifiManager wifiManager;
-	private Wifi wifi;
 	private Thread wifithread;
 	private Thread accelThread;
 	private Thread coordthread;
@@ -281,7 +280,7 @@ public class ActivityTrackerService extends Service implements Observer {
 	      Notification notification = new Notification(R.drawable.iconnotification, text, System.currentTimeMillis());
 	
 	      Intent notifyIntent = new Intent(Intent.ACTION_MAIN);
-	      notifyIntent.setClass(getApplicationContext(), UCSBActivityTrackerActivity.class);
+	      notifyIntent.setClass(getApplicationContext(), GauchoSafe.class);
 	      notifyIntent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
 	      
 	      // The PendingIntent to launch our activity if the user selects this notification

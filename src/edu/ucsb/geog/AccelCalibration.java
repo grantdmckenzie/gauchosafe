@@ -43,7 +43,7 @@ public class AccelCalibration implements SensorEventListener
 
 	public AccelCalibration(SensorManager mSensorManager, TextView textViewSD, Button calibrationButton, Context context) 
 	{
-		this.appSharedPrefs = context.getSharedPreferences(APP_SHARED_PREFS, UCSBActivityTrackerActivity.MODE_WORLD_READABLE);
+		this.appSharedPrefs = context.getSharedPreferences(APP_SHARED_PREFS, GauchoSafe.MODE_WORLD_READABLE);
         this.prefsEditor = appSharedPrefs.edit();
         
 		this.mSensorManager = mSensorManager;

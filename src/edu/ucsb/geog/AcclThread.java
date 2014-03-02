@@ -61,7 +61,6 @@ public class AcclThread extends Observable implements Runnable, SensorEventListe
 	 private double vecLength;
 	 private ArrayList<Double> previousVector;
 	 private int fixcount;
-	 private WifiThread WifiAlarmReceiver;
 	 private SimpleDateFormat simpleDateFormat;
 	 public boolean stationarityChanged;
 	 public boolean stationary;
@@ -140,37 +139,24 @@ public class AcclThread extends Observable implements Runnable, SensorEventListe
 				double thisSD = thisBurstSD.getSD();
 				
 				boolean isStationary = true;
-				double sdDiff = Math.abs(thisSD - this.callibrationSD);
-				// Log.v("SD difference", sdDiff+"");
+				double sdDiff = Math.abs(thisSD);
+				Log.v("SD difference", sdDiff+"");
 				
-				if(sdDiff>0.1)
+				if(sdDiff>1.0)
 					isStationary = false;
 		  		
 				if(isStationary)
 				{
 					if(appSharedPrefs.getBoolean("stationary", true))
 					{
-						returnStatus(false,true);
+						//returnStatus(false,true);
+						Log.v("AccelService","STATIONARY => STATIONARY");
 					}
 					else
 					{
 						prefsEditor.putBoolean("stationary", true);
-						returnStatus(true,true);
-					}
-					
-					Iterator<JSONObject> fixIterator = fixes.iterator();
-					while(fixIterator.hasNext())
-					{
-						JSONObject fixJsonObject = fixIterator.next();
-						try
-						{
-							fixJsonObject.put("status", "stationary");
-						} 
-						catch (Exception e)
-						{
-							// TODO: handle exception
-						}
-						
+						//returnStatus(true,true);
+						Log.v("AccelService","ACTIVE => STATIONARY");
 					}
 				}
 				else
@@ -178,163 +164,25 @@ public class AcclThread extends Observable implements Runnable, SensorEventListe
 					if(appSharedPrefs.getBoolean("stationary", true))
 					{
 						prefsEditor.putBoolean("stationary", false);
-						returnStatus(true,false);
+						//returnStatus(true,false);
+						Log.v("AccelService","ACTIVE => STATIONARY");
 					}
 					else
 					{
-						returnStatus(false,false);
-					}
-					
-					Iterator<JSONObject> fixIterator = fixes.iterator();
-					while(fixIterator.hasNext())
-					{
-						JSONObject fixJsonObject = fixIterator.next();
-						try
-						{
-							fixJsonObject.put("status", "moving");
-						} 
-						catch (Exception e)
-						{
-							// TODO: handle exception
-						}	
+						//returnStatus(false,false);
+						Log.v("AccelService","ACTIVE => ACTIVE");
 					}
 					
 				}
 				
-				writeToFile(fixes);
 		  	  }
 
 	  		
-	  	  /*try 
-	  	  {
-	  		// Wait until we have at least 2 sensor vals
-	  		if(this.previousVector.size() != 0) {			
-		  	  this.vecLength = Math.sqrt(Math.pow(this.previousVector.get(0)+event.values[0], 2) + Math.pow(this.previousVector.get(1)+event.values[1], 2) + Math.pow(this.previousVector.get(2)+event.values[2], 2)); 	
-		  	  Log.v("AcclThread", "Diff: "+Math.abs(this.vecLength - this.callibrationMean));
-	  		 
-		  	  if (Math.abs(this.vecLength - this.callibrationMean) > this.callibrationSD*2) {
-		  		 Log.v("AccelThread", "Movement");
-		  		  if (appSharedPrefs.getBoolean("stationary", true)) {
-		  			prefsEditor.putBoolean("stationary", false);
-		  			// Changed from stationary to movement and we are now moving
-		  			returnStatus(true, false);
-		  		  } else {
-		  			// No change and we are now moving
-		  			returnStatus(false, false);
-		  		  }
-		  	  } else if((this.fixcount == 50) && Math.abs(this.vecLength - this.callibrationMean) <= this.callibrationSD*2) {
-		  		Log.v("AccelThread", "Stationary");
-		  		if (!appSharedPrefs.getBoolean("stationary", true)) {
-		  			prefsEditor.putBoolean("stationary", true);
-		  			// Changed from movement to stationary and we are now stationary
-		  			returnStatus(true, true);
-		  		} else {
-		  			returnStatus(false, true);
-		  		}
-		  	  } 
-	  		}
-	  		this.previousVector = new ArrayList<Double>(3);
-		  	this.previousVector.add(0, (double) event.values[0]);
-		  	this.previousVector.add(1, (double) event.values[1]);
-		  	this.previousVector.add(2, (double) event.values[2]);
-	  		this.fixcount++;
-	  	  }
-	  	  catch (Exception e) 
-	  	  {
-	  		  e.printStackTrace();
-	  	  }
-	  	  
-	  	  */
 	  } 
 	  
-	  	
-	  private void writeToFile(Vector<JSONObject> fixVector) 
-	  {
-			Vector<JSONObject> fixVector2 = fixVector;
-			fixVector = new Vector<JSONObject>();
-			File logFile = new File("sdcard/ucsbat_"+deviceId+".log");
-			// Log.v("Path to file", "Path to file (service): "+logFile);
-		   if (!logFile.exists()) 
-		   {
-		      try {
-		         logFile.createNewFile();
-		      } 
-		      catch (IOException e) {
-		         e.printStackTrace();
-		      }
-		   }
-		   if (fixVector2.size() > 0) {
-	           try 
-	           {
-		    	   BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true)); 
-		           for (int i=0; i<fixVector2.size(); i++) {
-		                   buf.append(fixVector2.get(i).toString());
-		                   //Log.v("logs", fixVector2.get(i).toString());
-		                   buf.newLine();
-		           }
-		 	       buf.close();    
-	            } 
-	           catch (IOException e) 
-	           {
-	                Log.e("TAG", "Could not write file " + e.getMessage());
-	            }
-	           //running = true;
-		   }
-	  }
-	  	
-	  		
-	  public void writeToFile(JSONObject fix, Double veclength, Double callibrationSD, String stationary) throws JSONException 
-	  {
-		  fixes = new Vector<JSONObject>();
-		  
-		  this.appSharedPrefs.getInt("ucsb_filenum", 0);
-		  File logFile = new File("sdcard/UCSB_"+deviceId+".log");
-		  // Log.v("Path to file", "Path to file (service): "+logFile);
-		   
-		  if (!logFile.exists()) 
-		  {
-		      try 
-		      {
-		         logFile.createNewFile();
-		      } 
-		      catch (IOException e) 
-		      {
-		         e.printStackTrace();
-		      }
-		  }
-		  
-		  
-		  if (fix.length() > 0) 
-		  {
-	          try 
-	          {
-		    	   BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true)); 
-				   Iterator<?> keys = fix.keys();
-							
-		  			while(keys.hasNext() ){
-		  				String key = (String)keys.next();
-		  				JSONObject d = (JSONObject) fix.get(key);
-		  				String date = new java.text.SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(d.getLong("ts")*1000);
-	
-		  				buf.append(stationary+",");
-		  				buf.append(date + ",");
-		  				buf.append(d.getString("ts") + ",");
-		  				buf.append(veclength + ",");
-		  				buf.append(callibrationSD + ",");
-		  				buf.append(d.getString("BSSID") + ",");
-		  				buf.append(d.getString("Signal"));
-		  				buf.newLine();
-	  	            	// Log.v("File Output", stationary+","+date+","+veclength+","+d.getString("BSSID"));
-	  	            }
-		  			buf.close(); 
-	           } 
-	           catch (IOException e) 
-	           {
-	                Log.e("TAG", "Could not write file " + e.getMessage());
-	           }  
-		   }
-		}
 
+	  		
+	 
 		@Override
 		public void run() 
 		{
@@ -347,31 +195,6 @@ public class AcclThread extends Observable implements Runnable, SensorEventListe
 			  	
 			 this.stationarityChanged = changed;
 			 this.stationary = stationary;
-	  		 /* if(!stationary) {
-	  			 Log.v("Accel State", "Moving");
-				// wifiManager.startScan();
-				// writeToFile(scanWifi(), veclength, callibrationSD, "movement"); 
-	  			 setChanged();
-	  			 notifyObservers();
-	  			// If we aren't scanning for wifi, start.
-		  			/* if(!appSharedPrefs.getBoolean("wifiscan", false)) {
-		  				Log.v("Wifi State", "Starting");
-			  			if(WifiAlarmReceiver == null) 
-			  				WifiAlarmReceiver = new WifiAlarmReceiver();
-			  			WifiAlarmReceiver.SetAlarm(context);
-			  			prefsEditor.putBoolean("wifiscan", true);
-		  			} 
-	  		  } else if (stationary && hasIt){
-	  			// wifiManager.startScan();
-				//writeToFile(scanWifi(), veclength, callibrationSD, "stationary"); 
-	  			Log.v("Accel State", "Stationary");
-	  			if(WifiAlarmReceiver != null)		  
-	  				WifiAlarmReceiver.CancelAlarm(context);
-	  		  } */
-			
-	  		/* Log.v("changed", ""+changed);
-	  		Log.v("stationary", ""+stationary);
-	  		Log.v("separetor", "--------------------------"); */
 			
 			 // store state
 	  		  prefsEditor.commit();  
@@ -389,20 +212,4 @@ public class AcclThread extends Observable implements Runnable, SensorEventListe
 	  		    }
 		}
 		
-		public JSONObject scanWifi() throws JSONException {
-		    List<ScanResult> results = wifiManager.getScanResults();
-		    long timestamp = new Long(System.currentTimeMillis() / 1000);
-			JSONObject fix = new JSONObject();
-			for (ScanResult sr : results) {
-				JSONObject wifirecord = new JSONObject();
-				wifirecord.put("ts", timestamp);
-				// wifirecord.put("SSID", sr.SSID);
-				wifirecord.put("Signal", sr.level);
-				// wifirecord.put("Frequency", sr.frequency);
-				wifirecord.put("BSSID",sr.BSSID);
-				// wifirecord.put("Capabilities", sr.capabilities);
-				fix.put(sr.BSSID, wifirecord);
-			}
-		    return fix;
-		}
 }
