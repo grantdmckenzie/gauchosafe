@@ -2,9 +2,9 @@
 <resources>
 
     <string name="hello">Hello World, UCSBActivityTrackerActivity!</string>
-    <string name="app_name">AcTrak.Wifi</string>
-    <string name="local_service_started">Select to return to UCSBActivityTracker.</string>
-    <string name="local_service_label">UCSBActivityTracker is ON</string>
+    <string name="app_name">GauchoSafe v0.1</string>
+    <string name="local_service_started">Select to return to GauchoSafe</string>
+    <string name="local_service_label">GauchoSafe is ON</string>
     <string name="caliberation_started">Caliberation is started.</string>
-    <string name="accel_started">Location tracking is on</string>
+    <string name="accel_started">GauchoSafe is ON</string>
 </resources>

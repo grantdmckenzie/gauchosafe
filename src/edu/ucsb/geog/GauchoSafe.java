@@ -17,6 +17,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.graphics.Color;
+import android.hardware.Camera;
 import android.hardware.SensorManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -42,6 +43,7 @@ public class GauchoSafe extends Activity implements OnClickListener {
 	private ConnectivityManager connectivity;
 	private String deviceId;
 	private static final String PREFERENCE_NAME = "ucsbprefs";
+	private Camera camera;
 	 
 	
 	/** Called when the activity is first created. */
@@ -114,19 +116,30 @@ public class GauchoSafe extends Activity implements OnClickListener {
 					buttonDoSomething.setText("Turn GauchoSafe OFF");
 					// prefsEditor.putBoolean("turnOnWifi", true);
 					prefsEditor.putBoolean("stationary", true);
+					editor.putInt("lightOn", 0);
 			        prefsEditor.commit();
+			        
 			  } else {
 				    stopService(serviceIntent);
 					trackeron = false;
 					buttonDoSomething.setText("Turn GauchoSafe ON");
 					prefsEditor.putBoolean("stationary", true);
+					editor.putInt("lightOn", 0);
 			        prefsEditor.commit();
 			        
 			  }
+			  try {
+		        	camera.release();
+		        } catch (Exception e) {
+		        	// fix this
+		        }
 			  buttonDoSomething.setEnabled(true);
 			  editor.putBoolean("ucsb_tracker", trackeron);
 			  editor.commit();
-		  } 
+		  } else if (src.getId() == R.id.btn2) {
+			  editor.putInt("lightOn", 0);
+			  editor.commit();
+		  }
 	}
 	
 	public void errorDialog(String msg) {

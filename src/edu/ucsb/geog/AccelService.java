@@ -19,6 +19,8 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.wifi.WifiManager;
+import android.hardware.Camera;
+import android.hardware.Camera.Parameters;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
@@ -33,15 +35,19 @@ public class AccelService extends Service
   private ScreenOffBroadcastReceiver screenOffBroadcastReceiver;
   private boolean samplingStarted = false;
   private static AlarmManager alarmManager;
+  private static Camera camera;
+  private static Parameters p;
+  private static boolean cameraIsOn = false;
 
   
   public void onCreate() 
   {	 
 	  showNotification();
 	  Log.v("AccelService", "onCreate");
+	  
   }
   
-  public int onStartCommand(Intent intent, int flags, int startId) 
+  	public int onStartCommand(Intent intent, int flags, int startId) 
   {
 
 		
@@ -56,7 +62,6 @@ public class AccelService extends Service
 	 return START_STICKY;
   }
 
-	
   	@Override
   	public void onDestroy() 
   	{
@@ -161,6 +166,8 @@ public class AccelService extends Service
 	{
 		private long msInterval = 10000;
 		private Context alrmContext;
+		private SharedPreferences appSharedPrefs;
+		private Editor prefsEditor;
 
 		@Override
 		public void onReceive(Context context, Intent intent) 
@@ -175,7 +182,8 @@ public class AccelService extends Service
 	        Thread thread = new Thread(acclThread);
 	        thread.start();
 	        acclThread.addObserver(this);
-	        
+	        appSharedPrefs = context.getSharedPreferences("edu.ucsb.geog", Context.MODE_WORLD_READABLE);
+		    prefsEditor = appSharedPrefs.edit();
 	        wl.release();    
 	    }
 
@@ -210,12 +218,37 @@ public class AccelService extends Service
 			if(observable instanceof AcclThread) {
 				boolean stationary = ((AcclThread) observable).stationary;
 				boolean stationarityChanged = ((AcclThread) observable).stationarityChanged;
+				//Log.v("AccelService", "LightOn: "+appSharedPrefs.getInt("lightOn", 1));
+				//if(appSharedPrefs.getInt("lightOn", 1) == 0) {
+					//Log.v("AccelService", "TURN LIGHT OFF");
+					//turnOffFlashLight();
+				//}
 				if(!stationary && stationarityChanged) {
 					Log.v("AccelService", "STARTED MOVING");
+					if(!cameraIsOn) {
+						turnOnFlashLight();
+					}
 				} else if (stationary && stationarityChanged) {
 					Log.v("AccelService", "BECAME STATIONARY");
 				}
 			}
+		}
+		
+		private void turnOnFlashLight() {
+				camera = Camera.open();
+				p = camera.getParameters();
+				p.setFlashMode(Parameters.FLASH_MODE_TORCH);
+				camera.setParameters(p);
+				camera.startPreview();
+				cameraIsOn = true;
+				prefsEditor.putInt("lightOn", 2);
+				prefsEditor.commit();
+		}
+		private void turnOffFlashLight() {
+			cameraIsOn = false;
+			prefsEditor.putInt("lightOn", 0);
+			prefsEditor.commit();
+			camera.release();
 		}
 
 	}

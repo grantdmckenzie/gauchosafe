@@ -24,10 +24,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.hardware.Camera.Parameters;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.hardware.Camera;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.PowerManager;
@@ -67,6 +69,8 @@ public class AcclThread extends Observable implements Runnable, SensorEventListe
 	  
 	  public AcclThread(Context context)
 	  {
+		 
+			
 		  //Log.v("AcclThread", "Constructor"); 
 		  this.context = context;
 		  tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
@@ -149,14 +153,14 @@ public class AcclThread extends Observable implements Runnable, SensorEventListe
 				{
 					if(appSharedPrefs.getBoolean("stationary", true))
 					{
-						//returnStatus(false,true);
-						Log.v("AccelService","STATIONARY => STATIONARY");
+						returnStatus(false,true);
+						//Log.v("AccelService","STATIONARY => STATIONARY");
 					}
 					else
 					{
 						prefsEditor.putBoolean("stationary", true);
-						//returnStatus(true,true);
-						Log.v("AccelService","ACTIVE => STATIONARY");
+						returnStatus(true,true);
+						//Log.v("AccelService","ACTIVE => STATIONARY");
 					}
 				}
 				else
@@ -164,22 +168,44 @@ public class AcclThread extends Observable implements Runnable, SensorEventListe
 					if(appSharedPrefs.getBoolean("stationary", true))
 					{
 						prefsEditor.putBoolean("stationary", false);
-						//returnStatus(true,false);
-						Log.v("AccelService","ACTIVE => STATIONARY");
+						returnStatus(true,false);
+						//Log.v("AccelService","ACTIVE => STATIONARY");
+						
 					}
 					else
 					{
-						//returnStatus(false,false);
-						Log.v("AccelService","ACTIVE => ACTIVE");
+						returnStatus(false,false);
+						//Log.v("AccelService","ACTIVE => ACTIVE");
 					}
-					
+					/* Log.v("AccelThread", "LightOn: "+appSharedPrefs.getBoolean("lighton", false));
+					if(appSharedPrefs.getInt("lighton", 1) == 1) {
+						Camera camera = Camera.open();
+						Parameters p = camera.getParameters();
+						p.setFlashMode(Parameters.FLASH_MODE_TORCH);
+						camera.setParameters(p);
+						camera.startPreview();
+						
+						p.setFlashMode(Parameters.FLASH_MODE_TORCH);
+						camera.setParameters(p);
+						camera.stopPreview();
+						
+						p.setFlashMode(Parameters.FLASH_MODE_TORCH);
+						camera.setParameters(p);
+						camera.startPreview();
+						
+						p.setFlashMode(Parameters.FLASH_MODE_TORCH);
+						camera.setParameters(p);
+						camera.stopPreview();
+						camera.release();
+						prefsEditor.putInt("lighton", 2);
+						prefsEditor.commit();
+					} */
 				}
 				
 		  	  }
-
-	  		
 	  } 
 	  
+	  	
 
 	  		
 	 
