@@ -113,7 +113,7 @@ public class NetworkCoords extends Observable implements Runnable, Fix {
 				{
 					prevlat = latitude;
 					prevlng = longitude;
-					Thread.sleep(60000);  
+					Thread.sleep(6000);  
 				} 
 				catch (InterruptedException ex) 
 				{

@@ -1,11 +1,9 @@
 package edu.ucsb.geog;
 
-import java.util.HashMap;
 import java.util.Observable;
 import java.util.Observer;
 
 import android.app.AlarmManager;
-import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -14,14 +12,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
-import android.location.Criteria;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.net.wifi.WifiManager;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
-import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.SystemClock;
@@ -38,13 +30,14 @@ public class AccelService extends Service
   private static Camera camera;
   private static Parameters p;
   private static boolean cameraIsOn = false;
+  private Context context;
 
   
   public void onCreate() 
   {	 
 	  showNotification();
 	  Log.v("AccelService", "onCreate");
-	  
+	  context = this.getApplicationContext();
   }
   
   	public int onStartCommand(Intent intent, int flags, int startId) 
@@ -140,7 +133,7 @@ public class AccelService extends Service
 		{
 			try 
 			{
-				Thread.sleep( 2000L );
+				Thread.sleep( 500L );
 			} 
 			catch( InterruptedException ex ) {}
 			
@@ -164,8 +157,8 @@ public class AccelService extends Service
 	// AlarmReceiver inner Class
 	public static class AlarmReceiver extends BroadcastReceiver implements Observer
 	{
-		private long msInterval = 10000;
-		private Context alrmContext;
+		private long msInterval = 1000;
+		private Context alrmContext, context;
 		private SharedPreferences appSharedPrefs;
 		private Editor prefsEditor;
 
@@ -182,6 +175,7 @@ public class AccelService extends Service
 	        Thread thread = new Thread(acclThread);
 	        thread.start();
 	        acclThread.addObserver(this);
+	        this.context = context;
 	        appSharedPrefs = context.getSharedPreferences("edu.ucsb.geog", Context.MODE_WORLD_READABLE);
 		    prefsEditor = appSharedPrefs.edit();
 	        wl.release();    
@@ -226,7 +220,10 @@ public class AccelService extends Service
 				if(!stationary && stationarityChanged) {
 					Log.v("AccelService", "STARTED MOVING");
 					if(!cameraIsOn) {
-						turnOnFlashLight();
+						//turnOnFlashLight();
+						
+						FlashThread flash = new FlashThread(appSharedPrefs, context);
+						flash.run();
 					}
 				} else if (stationary && stationarityChanged) {
 					Log.v("AccelService", "BECAME STATIONARY");

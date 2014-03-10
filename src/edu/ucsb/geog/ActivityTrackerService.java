@@ -133,7 +133,7 @@ public class ActivityTrackerService extends Service implements Observer {
 		    		
 		    		try
 					{
-						Thread.sleep(40000);					
+						Thread.sleep(2000);					
 					} 
 					catch (Exception e) 
 					{

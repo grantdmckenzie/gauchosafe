@@ -135,7 +135,7 @@ public class AcclThread extends Observable implements Runnable, SensorEventListe
 		  	 
 		  	  fixes.add(fix);
 	
-		  	  if(fixes.size()==50) 
+		  	  if(fixes.size()==30) 
 		  	  {
 		  		mSensorManager.unregisterListener(this);
 		  		
@@ -146,7 +146,7 @@ public class AcclThread extends Observable implements Runnable, SensorEventListe
 				double sdDiff = Math.abs(thisSD);
 				Log.v("SD difference", sdDiff+"");
 				
-				if(sdDiff>1.0)
+				if(sdDiff>6.0)
 					isStationary = false;
 		  		
 				if(isStationary)

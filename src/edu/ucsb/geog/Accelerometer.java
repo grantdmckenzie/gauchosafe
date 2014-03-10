@@ -94,7 +94,7 @@ public class Accelerometer extends Observable implements SensorEventListener, Ru
 		fixes.add(fix);
 		
 		
-		if(fixes.size()==50)
+		if(fixes.size()==30)
   		{
   			mSensorManager.unregisterListener(this);
   			
