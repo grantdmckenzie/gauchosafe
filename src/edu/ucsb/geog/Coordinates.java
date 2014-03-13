@@ -111,7 +111,8 @@ public class Coordinates implements Runnable, Fix {
 				try {
 					prevlat = latitude;
 					prevlng = longitude;
-					Thread.sleep(60000);
+					//Log.v("Coordinates", latitude + ", "+longitude);
+					Thread.sleep(1000);
 				} catch (InterruptedException ex) {
 					// nothing to see here. Move along.
 				}

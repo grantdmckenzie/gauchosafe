@@ -16,6 +16,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Looper;
+import android.util.Log;
 
 public class NetworkCoords extends Observable implements Runnable, Fix {
 	private double latitude;
@@ -64,7 +65,7 @@ public class NetworkCoords extends Observable implements Runnable, Fix {
 			accuracy = loc.getAccuracy();
 			speed = loc.getSpeed();
 			altitude = loc.getAltitude();
-
+			Log.v("Coordinates", "Lat:"+latitude+", Lng: "+longitude);
 			// When the location changes, add the new location to the fix object
 			
 			try {

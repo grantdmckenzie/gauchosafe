@@ -23,6 +23,10 @@ public class FlashThread implements Runnable
 		  this.context = context;
 		  appSharedPrefs = sp;
 		  prefsEditor = appSharedPrefs.edit();
+		  prefsEditor.putInt("lightOn", 2);
+		  prefsEditor.putBoolean("isEmergent", true);
+		  prefsEditor.commit();
+		  
 	  }
 	  
 		private void turnOnFlashLight() {
@@ -32,8 +36,7 @@ public class FlashThread implements Runnable
 			camera.setParameters(p);
 			camera.startPreview();
 			cameraIsOn = true;
-			prefsEditor.putInt("lightOn", 2);
-			prefsEditor.commit();
+			
 	}
 	private void turnOffFlashLight() {
 		cameraIsOn = false;

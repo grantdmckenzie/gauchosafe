@@ -14,6 +14,7 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
+import android.location.LocationManager;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.SystemClock;
@@ -31,19 +32,19 @@ public class AccelService extends Service
   private static Parameters p;
   private static boolean cameraIsOn = false;
   private Context context;
-
+  
   
   public void onCreate() 
   {	 
 	  showNotification();
 	  Log.v("AccelService", "onCreate");
+	  
 	  context = this.getApplicationContext();
+
   }
   
-  	public int onStartCommand(Intent intent, int flags, int startId) 
+  public int onStartCommand(Intent intent, int flags, int startId) 
   {
-
-		
 	  if(alarmReceiver == null)
 		  alarmReceiver = new AlarmReceiver();
 	  
@@ -52,7 +53,8 @@ public class AccelService extends Service
 
 	  alarmReceiver.SetAlarm(getApplicationContext());
 	  samplingStarted = true;
-	 return START_STICKY;
+	  
+	  return START_STICKY;
   }
 
   	@Override
@@ -60,10 +62,12 @@ public class AccelService extends Service
   	{
   		Log.v("AccelService", "onDestroy");
 	  //Cancel alarm when the service is destroyed
-	  if(alarmReceiver != null) { 
+	  if(alarmReceiver != null) 
+	  { 
 		  alarmReceiver.CancelAlarm(getApplicationContext());
 		  // unregisterReceiver(alarmReceiver);
 	  }
+	  
 
 	  samplingStarted = false;
 	  
@@ -191,6 +195,8 @@ public class AccelService extends Service
 			PendingIntent pi = PendingIntent.getBroadcast(context, 0, i, 0);
 			
 			alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, SystemClock.elapsedRealtime(), msInterval, pi);
+			
+		    
 			// Log.v("AlarmReceiver", "setRepeating done"); 
 
 		}
@@ -208,8 +214,10 @@ public class AccelService extends Service
 
 		// Receives notifications from the observable (the thread)
 		@Override
-		public void update(Observable observable, Object data) {
-			if(observable instanceof AcclThread) {
+		public void update(Observable observable, Object data) 
+		{
+			if(observable instanceof AcclThread) 
+			{
 				boolean stationary = ((AcclThread) observable).stationary;
 				boolean stationarityChanged = ((AcclThread) observable).stationarityChanged;
 				//Log.v("AccelService", "LightOn: "+appSharedPrefs.getInt("lightOn", 1));
@@ -217,15 +225,21 @@ public class AccelService extends Service
 					//Log.v("AccelService", "TURN LIGHT OFF");
 					//turnOffFlashLight();
 				//}
-				if(!stationary && stationarityChanged) {
-					Log.v("AccelService", "STARTED MOVING");
-					if(!cameraIsOn) {
+				if(!stationary && stationarityChanged) 
+				{
+					Log.v("AccelService", "STARTED MOVING");		
+					
+					if(!cameraIsOn) 
+					{
 						//turnOnFlashLight();
 						
 						FlashThread flash = new FlashThread(appSharedPrefs, context);
 						flash.run();
 					}
-				} else if (stationary && stationarityChanged) {
+					
+				}
+				else if (stationary && stationarityChanged) 
+				{
 					Log.v("AccelService", "BECAME STATIONARY");
 				}
 			}

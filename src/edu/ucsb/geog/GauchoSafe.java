@@ -1,38 +1,37 @@
 package edu.ucsb.geog;
 
 
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.UUID;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.StatusLine;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
-import android.graphics.Color;
 import android.hardware.Camera;
-import android.hardware.SensorManager;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.telephony.TelephonyManager;
-import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
-import android.widget.TextView;
 
-public class GauchoSafe extends Activity implements OnClickListener {
-
+public class GauchoSafe extends Activity implements OnClickListener, LocationListener, Runnable 
+{
 	private Button buttonDoSomething;
 	private Button buttonCalibrate;
 	private SharedPreferences settings;
@@ -44,6 +43,16 @@ public class GauchoSafe extends Activity implements OnClickListener {
 	private String deviceId;
 	private static final String PREFERENCE_NAME = "ucsbprefs";
 	private Camera camera;
+	
+	// start the location section
+	private LocationManager locationManager;
+	private String locationProvider;
+	private Thread locationThread;
+	private double latitude = 0;
+	private double longitude = 0;
+	
+	// phone number
+	private String phoneNumber;
 	 
 	
 	/** Called when the activity is first created. */
@@ -62,23 +71,38 @@ public class GauchoSafe extends Activity implements OnClickListener {
 		String tmDevice, tmSerial, androidId;
 	    tmDevice = "" + tm.getDeviceId();
 	    tmSerial = "" + tm.getSimSerialNumber();
+	    phoneNumber = tm.getLine1Number();
 	    androidId = "" + android.provider.Settings.Secure.getString(getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
 	    UUID deviceUuid = new UUID(androidId.hashCode(), ((long)tmDevice.hashCode() << 32) | tmSerial.hashCode());
 	    deviceId = deviceUuid.toString();
 		
-		trackeron = settings.getBoolean("ucsb_tracker", false);
+		
 		
 		buttonDoSomething = (Button) findViewById(R.id.btn1);
 		buttonDoSomething.setOnClickListener(this);
 		
 		serviceIntent = new Intent(this, AccelService.class);
 	    
-	    if (trackeron) {
+		
+	    
+	    locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+	    Criteria locationCriteria = new Criteria();
+	    locationProvider = locationManager.getBestProvider(locationCriteria, false);
+	}
+	
+	@Override
+	protected void onResume() 
+	{
+		super.onResume();
+		trackeron = settings.getBoolean("ucsb_tracker", false);
+	    if (trackeron) 
+	    {
 	    	buttonDoSomething.setText("Turn GauchoSafe OFF");
-	    } else {
+	    } 
+	    else 
+	    {
 	    	buttonDoSomething.setText("Turn GauchoSafe ON");
 	    }
-	       
 	}
 	
 
@@ -108,35 +132,58 @@ public class GauchoSafe extends Activity implements OnClickListener {
 	public void onClick(View src) {
 		  SharedPreferences preferences = getSharedPreferences(PREFERENCE_NAME, MODE_WORLD_READABLE);
 		  SharedPreferences.Editor editor = preferences.edit(); 
-		  if (src.getId() == R.id.btn1) {
+		  if (src.getId() == R.id.btn1) 
+		  {
 			  buttonDoSomething.setEnabled(false);
-			  if (!trackeron) { 
+			  if (!trackeron) 
+			  { 
 				  	startService(serviceIntent);
 					trackeron = true;
 					buttonDoSomething.setText("Turn GauchoSafe OFF");
 					// prefsEditor.putBoolean("turnOnWifi", true);
 					prefsEditor.putBoolean("stationary", true);
+					prefsEditor.putBoolean("ucsb_tracker", trackeron);
+					prefsEditor.putBoolean("isEmergent", false);
 					editor.putInt("lightOn", 0);
 			        prefsEditor.commit();
 			        
-			  } else {
+			        
+			  	    // turn on location service
+			        locationManager.requestLocationUpdates(locationProvider, 400, 1, this);	        
+			        locationThread = new Thread(this);
+			        locationThread.start();
+			  } 
+			  else 
+			  {
 				    stopService(serviceIntent);
 					trackeron = false;
 					buttonDoSomething.setText("Turn GauchoSafe ON");
 					prefsEditor.putBoolean("stationary", true);
+					prefsEditor.putBoolean("ucsb_tracker", trackeron);
+					prefsEditor.putBoolean("isEmergent", false);
 					editor.putInt("lightOn", 0);
 			        prefsEditor.commit();
 			        
+			        
+			        // cancel location service
+			        locationManager.removeUpdates(this);		    
 			  }
-			  try {
+			  
+			  try 
+			  {
 		        	camera.release();
-		        } catch (Exception e) {
+		       } 
+			  catch (Exception e) 
+			  {
 		        	// fix this
-		        }
+		      }
+			  
 			  buttonDoSomething.setEnabled(true);
 			  editor.putBoolean("ucsb_tracker", trackeron);
 			  editor.commit();
-		  } else if (src.getId() == R.id.btn2) {
+		  } 
+		  else if (src.getId() == R.id.btn2) 
+		  {
 			  editor.putInt("lightOn", 0);
 			  editor.commit();
 		  }
@@ -152,6 +199,85 @@ public class GauchoSafe extends Activity implements OnClickListener {
   	        return;  
   	   } });
         adb.show(); 
+	}
+
+
+	@Override
+	public void run() 
+	{
+		while(true)
+		{
+			trackeron = settings.getBoolean("ucsb_tracker", false);
+			if(!trackeron)
+				break;
+			try 
+			{
+				Thread.sleep(2000);
+			} 
+			catch (InterruptedException e) 
+			{
+				e.printStackTrace();
+			}
+			
+			sendDataToServer(latitude, longitude, phoneNumber);
+			//System.out.println(latitude+","+longitude+","+phoneNumber);
+			
+		}	
+	}
+
+
+	@Override
+	public void onLocationChanged(Location location) 
+	{
+		latitude = location.getLatitude();
+		longitude = location.getLongitude();
+	}
+
+
+	@Override
+	public void onProviderDisabled(String provider) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public void onProviderEnabled(String provider) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public void onStatusChanged(String provider, int status, Bundle extras) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	
+	public void sendDataToServer(double latitude, double longitude, String phoneNumber)
+	{
+		HttpClient httpclient = new DefaultHttpClient();
+	    HttpResponse response;
+		try 
+		{
+			String requestURL = "http://stko-work.geog.ucsb.edu/gauchosafe/handlers/track.php?lat="+latitude+"&lng="+longitude+"&id="+phoneNumber;
+			System.out.println(requestURL);
+			response = httpclient.execute(new HttpGet(requestURL));
+			StatusLine statusLine = response.getStatusLine();
+		    if(statusLine.getStatusCode() == HttpStatus.SC_OK)
+		    {
+		        System.out.println("success");
+		    }
+		    else
+		    {
+		    	System.out.println("failed");
+		    }
+		} 
+		catch (Exception e) 
+		{
+			e.printStackTrace();
+		} 
 	}
 
 }
