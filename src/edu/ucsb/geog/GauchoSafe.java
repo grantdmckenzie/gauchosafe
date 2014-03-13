@@ -3,13 +3,7 @@ package edu.ucsb.geog;
 
 import java.util.UUID;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.StatusLine;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-
+import android.R.integer;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -19,8 +13,6 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.hardware.Camera;
 import android.location.Criteria;
-import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -30,7 +22,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 
-public class GauchoSafe extends Activity implements OnClickListener, LocationListener, Runnable 
+public class GauchoSafe extends Activity implements OnClickListener
 {
 	private Button buttonDoSomething;
 	private Button buttonCalibrate;
@@ -44,15 +36,17 @@ public class GauchoSafe extends Activity implements OnClickListener, LocationLis
 	private static final String PREFERENCE_NAME = "ucsbprefs";
 	private Camera camera;
 	
-	// start the location section
+	
+	private Intent coordIntent;
+	private String phoneNumber;
+	
+	
 	private LocationManager locationManager;
 	private String locationProvider;
 	private Thread locationThread;
-	private double latitude = 0;
-	private double longitude = 0;
+	private CoordThread coordThreadContainer;
 	
-	// phone number
-	private String phoneNumber;
+	public static Integer EMERGENCE = new Integer(0);
 	 
 	
 	/** Called when the activity is first created. */
@@ -71,23 +65,24 @@ public class GauchoSafe extends Activity implements OnClickListener, LocationLis
 		String tmDevice, tmSerial, androidId;
 	    tmDevice = "" + tm.getDeviceId();
 	    tmSerial = "" + tm.getSimSerialNumber();
-	    phoneNumber = tm.getLine1Number();
 	    androidId = "" + android.provider.Settings.Secure.getString(getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
 	    UUID deviceUuid = new UUID(androidId.hashCode(), ((long)tmDevice.hashCode() << 32) | tmSerial.hashCode());
 	    deviceId = deviceUuid.toString();
-		
-		
+		phoneNumber = tm.getLine1Number();
+		prefsEditor.commit();
 		
 		buttonDoSomething = (Button) findViewById(R.id.btn1);
 		buttonDoSomething.setOnClickListener(this);
 		
 		serviceIntent = new Intent(this, AccelService.class);
+		
+		locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+		Criteria locationCriteria = new Criteria();
+		//locationCriteria.setAccuracy(Criteria.ACCURACY_MEDIUM);
 	    
+		locationProvider = locationManager.getBestProvider(locationCriteria, false);
 		
 	    
-	    locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-	    Criteria locationCriteria = new Criteria();
-	    locationProvider = locationManager.getBestProvider(locationCriteria, false);
 	}
 	
 	@Override
@@ -107,10 +102,12 @@ public class GauchoSafe extends Activity implements OnClickListener, LocationLis
 	
 
 	@Override
-	  protected void onPause() {
+	  protected void onPause() 
+	  {
 	      super.onPause();
 	      saveState();
 	  }
+	
 	  public void onSaveInstanceState(Bundle savedInstanceState) {
 		  super.onSaveInstanceState(savedInstanceState);
 		  saveState();
@@ -138,44 +135,42 @@ public class GauchoSafe extends Activity implements OnClickListener, LocationLis
 			  if (!trackeron) 
 			  { 
 				  	startService(serviceIntent);
+				  	
 					trackeron = true;
 					buttonDoSomething.setText("Turn GauchoSafe OFF");
 					// prefsEditor.putBoolean("turnOnWifi", true);
 					prefsEditor.putBoolean("stationary", true);
 					prefsEditor.putBoolean("ucsb_tracker", trackeron);
-					prefsEditor.putBoolean("isEmergent", false);
 					editor.putInt("lightOn", 0);
 			        prefsEditor.commit();
 			        
-			        
-			  	    // turn on location service
-			        locationManager.requestLocationUpdates(locationProvider, 400, 1, this);	        
-			        locationThread = new Thread(this);
+			        coordThreadContainer = new CoordThread(locationManager,locationProvider, preferences, phoneNumber);
+			        locationManager.requestLocationUpdates(locationProvider, 400, 1, coordThreadContainer);	        
+			        locationThread = new Thread(coordThreadContainer);
 			        locationThread.start();
 			  } 
 			  else 
 			  {
 				    stopService(serviceIntent);
+				    
 					trackeron = false;
 					buttonDoSomething.setText("Turn GauchoSafe ON");
 					prefsEditor.putBoolean("stationary", true);
 					prefsEditor.putBoolean("ucsb_tracker", trackeron);
-					prefsEditor.putBoolean("isEmergent", false);
 					editor.putInt("lightOn", 0);
-			        prefsEditor.commit();
+			        prefsEditor.commit();	
 			        
-			        
-			        // cancel location service
-			        locationManager.removeUpdates(this);		    
+			        locationManager.removeUpdates(coordThreadContainer);
+			        GauchoSafe.EMERGENCE = new Integer(0);
 			  }
 			  
 			  try 
 			  {
 		        	camera.release();
-		       } 
+		      } 
 			  catch (Exception e) 
 			  {
-		        	// fix this
+		        	//e.printStackTrace();
 		      }
 			  
 			  buttonDoSomething.setEnabled(true);
@@ -199,85 +194,6 @@ public class GauchoSafe extends Activity implements OnClickListener, LocationLis
   	        return;  
   	   } });
         adb.show(); 
-	}
-
-
-	@Override
-	public void run() 
-	{
-		while(true)
-		{
-			trackeron = settings.getBoolean("ucsb_tracker", false);
-			if(!trackeron)
-				break;
-			try 
-			{
-				Thread.sleep(2000);
-			} 
-			catch (InterruptedException e) 
-			{
-				e.printStackTrace();
-			}
-			
-			sendDataToServer(latitude, longitude, phoneNumber);
-			//System.out.println(latitude+","+longitude+","+phoneNumber);
-			
-		}	
-	}
-
-
-	@Override
-	public void onLocationChanged(Location location) 
-	{
-		latitude = location.getLatitude();
-		longitude = location.getLongitude();
-	}
-
-
-	@Override
-	public void onProviderDisabled(String provider) {
-		// TODO Auto-generated method stub
-		
-	}
-
-
-	@Override
-	public void onProviderEnabled(String provider) {
-		// TODO Auto-generated method stub
-		
-	}
-
-
-	@Override
-	public void onStatusChanged(String provider, int status, Bundle extras) {
-		// TODO Auto-generated method stub
-		
-	}
-	
-	
-	public void sendDataToServer(double latitude, double longitude, String phoneNumber)
-	{
-		HttpClient httpclient = new DefaultHttpClient();
-	    HttpResponse response;
-		try 
-		{
-			String requestURL = "http://stko-work.geog.ucsb.edu/gauchosafe/handlers/track.php?lat="+latitude+"&lng="+longitude+"&id="+phoneNumber;
-			System.out.println(requestURL);
-			response = httpclient.execute(new HttpGet(requestURL));
-			StatusLine statusLine = response.getStatusLine();
-		    if(statusLine.getStatusCode() == HttpStatus.SC_OK)
-		    {
-		        System.out.println("success");
-		    }
-		    else
-		    {
-		    	System.out.println("failed");
-		    }
-		} 
-		catch (Exception e) 
-		{
-			e.printStackTrace();
-		} 
 	}
 
 }

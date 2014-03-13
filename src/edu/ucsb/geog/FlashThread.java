@@ -26,6 +26,9 @@ public class FlashThread implements Runnable
 		  prefsEditor.putInt("lightOn", 2);
 		  prefsEditor.putBoolean("isEmergent", true);
 		  prefsEditor.commit();
+		  System.out.println("flash"+appSharedPrefs);
+		  
+		  GauchoSafe.EMERGENCE = new Integer(2);
 		  
 	  }
 	  
