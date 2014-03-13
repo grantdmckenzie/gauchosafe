@@ -38,7 +38,7 @@ public class CoordThread implements Runnable, LocationListener
 			longitude = location.getLongitude();
 			accuracy = location.getAccuracy();
 			if(accuracy < 500)
-				sendDataToServer(latitude, longitude, phoneNumber);
+				sendDataToServer(latitude, longitude, "");
 		}
 			
 	}
