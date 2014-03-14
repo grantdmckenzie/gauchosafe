@@ -177,11 +177,11 @@ public class GauchoSafe extends Activity implements OnClickListener
 			  editor.putBoolean("ucsb_tracker", trackeron);
 			  editor.commit();
 		  } 
-		  else if (src.getId() == R.id.btn2) 
+		  /* else if (src.getId() == R.id.btn2) 
 		  {
 			  editor.putInt("lightOn", 0);
 			  editor.commit();
-		  }
+		  } */
 	}
 	
 	public void errorDialog(String msg) {
